@@ -1,0 +1,9 @@
+{
+	"email":"nox35400@gmail.com",
+	"password":"12345",
+	"t411-credientials":{
+		"username":"noxionx",
+		"password":"warcraft3",
+		"last-token":null
+	}
+}
