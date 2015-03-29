@@ -50,12 +50,7 @@ app.post('/login', function (req, res) {
 	}
 })
 
-app.get('/torrents', function (req, res){
-	t411.getTorrents({},function(data){
-		res.json(data)
-	})
 
-})
 
 
 var server = app.listen(3000, function () {

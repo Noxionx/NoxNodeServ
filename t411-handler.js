@@ -40,30 +40,66 @@ var isConnected = function(){
 }
 exports.isConnected = isConnected
 
-exports.getTorrents = function(searchParams, callback){
-  var url = t411url+
+exports.getTorrentsCount = function(cid, callback){
+  if(!cid){
+    !!callback && callback(0)
+  }
+  else{
+    var url = t411url+
             '/torrents/search/'+
-            (!!searchParams && searchParams.query?searchParams.query:'')+
-            (!!searchParams && searchParams.cid?"&cid="+searchParams.cid:'')+
-            (!!searchParams && searchParams.limit?"&limit="+searchParams.limit:"&limit=100")+
-            (!!searchParams && searchParams.offset?"&offset="+searchParams.offset:'')
-  request.get({url: url, headers: {'Authorization':userToken}}, function(err,httpResponse,body){ 
-    if(err){
-      !!callback && callback(null)
-    }
-    else{
-      var bodyLines   = body.split('\n')
-      var reqResult   = JSON.parse((bodyLines.length>0)?bodyLines[3]:bodyLines[0])
-      var torrents = reqResult.torrents?reqResult.torrents:[]
-      var processedTorrents = []
-      torrents.forEach(function(elt){
-        if(isNaN(elt)){
-          processedTorrents.push(elt)
+            "&cid="+cid+
+            "&limit=1"
+    request.get({url: url, headers: {'Authorization':userToken}}, function(err,httpResponse,body){ 
+      if(err){
+        !!callback && callback(0)
+      }
+      else{
+        var bodyLines   = body.split('\n')
+        var reqResult   = JSON.parse((bodyLines.length>0)?bodyLines[3]:bodyLines[0])
+        var nbTorrents  = reqResult.total?parseInt(reqResult.total):0;
+        !!callback && callback(nbTorrents)
+      }
+    })
+  }
+}
+
+exports.getTorrents = function(searchParams, callback){
+  if(!isConnected()){
+    !!callback && callback({msg : "No user logged !"})
+  }
+  else{
+    var url = t411url+
+              '/torrents/search/'+
+              (!!searchParams && searchParams.query?searchParams.query:'')+
+              (!!searchParams && searchParams.cid?"&cid="+searchParams.cid:'')+
+              (!!searchParams && searchParams.limit?"&limit="+searchParams.limit:"&limit=100")+
+              (!!searchParams && searchParams.offset?"&offset="+searchParams.offset:'')
+    request.get({url: url, headers: {'Authorization':userToken}}, function(err,httpResponse,body){ 
+      if(err){
+        !!callback && callback(null)
+      }
+      else{
+        var processedTorrents = []
+        var bodyLines   = body.split('\n')
+        var strResult = (bodyLines.length>0)?bodyLines[3]:bodyLines[0]
+        if(!(/[^,:{}\[\]0-9.\-+Eaeflnr-u \n\r\t]/.test(strResult.replace(/"(\\.|[^"\\])*"/g,'')))){
+          var reqResult   = JSON.parse(strResult)
+          var torrents = reqResult.torrents?reqResult.torrents:[]
+          torrents.forEach(function(elt){
+            if(isNaN(elt)){
+              processedTorrents.push(elt)
+            }
+          })
+          !!callback && callback(processedTorrents)
         }
-      })
-      callback(processedTorrents)
-    }   
-  })       
+        else{
+          console.log("non valid rep")
+          !!callback && callback(processedTorrents)
+        }   
+      }   
+    }) 
+  }
+        
 }
 
 exports.getAllCID = function(callback){

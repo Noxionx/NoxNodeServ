@@ -34,26 +34,127 @@ var createTorrent = function(torrent){
 }
 var insertTorrent = function(torrent, callback){
 	var query = 'INSERT INTO Torrents SET ?'
-	connection.query(query, torrent, function(err, rows, fields) {
+	connection.query(query, createTorrent(torrent), function(err, rows, fields) {
 	  if (err){
 	  	throw err;
 	  	!!callback && callback(false)
 	  } 
-	  !!callback && callback(true)
+	  else{
+	  	!!callback && callback(true)
+	  }
 	});
 }
+exports.insertTorrent = insertTorrent
+
+var updateTorrent = function(torrent, callback){
+
+}
+
+var deleteTorrent = function(id){
+
+}
+
+var deleteCategory = function(CID, callback){
+	if(CID){
+		var query = 'DELETE FROM Torrents WHERE category=?'
+		connection.query(query, [CID], function(err, rows, fields) {
+		  if (err){
+		  	throw err;
+		  	!!callback && callback(false)
+		  } 
+		  else{
+		  	!!callback && callback(true)
+		  }
+		});
+	}
+	else{
+		!!callback && callback(false)
+	}
+}
+exports.deleteCategory = deleteCategory
+
+var deleteAllTorrents = function(callback){
+	var query = 'TRUNCATE TABLE Torrents'
+	connection.query(query, function(err, rows, fields) {
+	  if (err){
+	  	throw err;
+	  	!!callback && callback(false)
+	  } 
+	  else{
+	  	!!callback && callback(true)
+	  }
+	});
+}
+exports.deleteAllTorrents = deleteAllTorrents
+
+var getLastInsertedId = function(callback){
+	var query = 'SELECT MAX(id) FROM Torrents'
+	connection.query(query, function(err, rows, fields){
+		if (err){
+		  	throw err;
+		  	!!callback && callback(-1)
+		} 
+		else{
+			!!callback && callback(rows[0]["MAX(id)"])
+		}
+	})
+}
+exports.getLastInsertedId = getLastInsertedId
+
+var getNbTorrents = function(callback){
+	var query = 'SELECT COUNT(*) FROM Torrents'
+	connection.query(query, function(err, rows, fields){
+		if (err){
+		  	throw err;
+		  	!!callback && callback(-1)
+		} 
+		else{
+			!!callback && callback(rows[0]["COUNT(*)"])
+		}
+	})
+}
+exports.getNbTorrents = getNbTorrents
+
+var getNbTorrentsByCid = function(CID, callback){
+	if(CID){
+		var query = 'SELECT COUNT(*) FROM Torrents WHERE category=?'
+		connection.query(query, [CID], function(err, rows, fields){
+			if (err){
+			  	throw err;
+			  	!!callback && callback(-1)
+			} 
+			else{
+				!!callback && callback(rows[0]["COUNT(*)"])
+			}
+		})
+	}
+	else{
+		!!callback && callback(-1)
+	}
+}
+exports.getNbTorrentsByCid = getNbTorrentsByCid
+
+
+
 
 router.route('/torrents')
 	.get(function (req, res){
-		var query = 'SELECT * FROM Torrents'
+		var limit = 50
+		var offset = 0
+		if(req.query.hasOwnProperty("limit")){
+			limit = req.query.limit
+		}
+		if(req.query.hasOwnProperty("offset")){
+			offset = req.query.offset
+		}
+		var query = 'SELECT * FROM Torrents ORDER BY id DESC LIMIT '+limit+' OFFSET '+offset
 		connection.query(query, function(err, rows, fields) {
 		  if (err) throw err;
 		  res.json(rows)
 		});
 	})
 	.post(function (req, res){
-		var torrent = createTorrent(req.body)
-		insertTorrent(torrent, function(ok){
+		insertTorrent(req.body, function(ok){
 			if(ok){
 				res.status(201).send()
 			}
