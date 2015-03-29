@@ -6,6 +6,12 @@ var session = require('express-session')
 var app = express()
 var t411 = require("./t411-handler.js")
 
+var torrents = require("./ressources/torrents.js")
+
+
+
+
+//Express initialization
 app.set('trust proxy', 1) // trust first proxy
 app.use(express.static('public'));
 app.use(cookieParser());
@@ -20,6 +26,10 @@ app.use(session({
 app.use(passport.initialize());
 app.use(passport.session());
 
+app.use('/api', torrents.router)
+
+
+//Middleware - Loggin each request with timestamp + path
 app.use(function (req, res, next) {
 	var d = new Date();
 	var strDate = d.toLocaleString();
@@ -28,9 +38,8 @@ app.use(function (req, res, next) {
  	next();
 });
 
-
+//Route for login in - CREDENTIALS : {"username":username, "password":password}
 app.post('/login', function (req, res) {
-
 	if(!req.body.username||!req.body.password){
 		res.status(400).send({msg:"Missing parameters"})
 	}
@@ -40,10 +49,12 @@ app.post('/login', function (req, res) {
 		})
 	}
 })
+
 app.get('/torrents', function (req, res){
 	t411.getTorrents({},function(data){
 		res.json(data)
 	})
+
 })
 
 
