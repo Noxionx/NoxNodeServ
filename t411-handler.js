@@ -65,7 +65,7 @@ exports.getTorrentsCount = function(cid, callback){
 
 exports.getTorrents = function(searchParams, callback){
   if(!isConnected()){
-    !!callback && callback({msg : "No user logged !"})
+    !!callback && callback(null)
   }
   else{
     var url = t411url+

@@ -24,6 +24,53 @@ var torrent_model = {
     "categoryname": null,
     "username": null
 }
+var findAllTorrents = function(options, callback){
+	var cols_ordered = ["id","rewritename","seeders","leechers","added","size","times_completed"]
+	if(options.cid){
+		console.log(options.cid)
+		if(typeof options.cid=="string"){
+			if(options.cid.match(/\[(\s*\d*\s*)(,\s*\d*\s*)*\]/)){
+				options.cid = JSON.parse(options.cid)
+			}
+		}
+		else if(typeof options.cid=="number"){
+			options.cid = [options.cid]
+		}
+		else{
+			options.cid = undefined
+		}
+	}
+	if(options.query && options.query.length>2){
+		var tmpStr = options.query.toLowerCase()
+		options.query = tmpStr.replace(" ","-")
+	}
+	var col_ordered = "id"
+	if(options.sort){
+		cols_ordered.forEach(function(elt){
+			if(options.sort.match(elt)){
+				col_ordered = elt
+			}
+		})
+	}
+	var direction = "DESC"
+	if(options.order){
+		if(options.order.toLowerCase().match("asc")){
+			direction = "ASC"
+		}
+	}
+	var query = 'SELECT * FROM Torrents'+
+				(options.query?" WHERE rewritename LIKE '%"+options.query+"%'":"")+
+				(options.cid?((options.query?" AND":" WHERE")+" category IN ("+options.cid.join()+")"):"")+
+				' ORDER BY '+col_ordered+' '+direction+' LIMIT '+(options.limit || 50)+' OFFSET '+(options.offset || 0)
+	console.log(query)
+	connection.query(query, function(err, rows, fields) {
+	  if (err) throw err;
+	  !!callback && callback(rows)
+	});
+}
+var findTorrentById = function(id){
+
+}
 
 var createTorrent = function(torrent){
 	var repTorrent = {}
@@ -139,28 +186,20 @@ exports.getNbTorrentsByCid = getNbTorrentsByCid
 
 router.route('/torrents')
 	.get(function (req, res){
-		var limit = 50
-		var offset = 0
-		if(req.query.hasOwnProperty("limit")){
-			limit = req.query.limit
-		}
-		if(req.query.hasOwnProperty("offset")){
-			offset = req.query.offset
-		}
-		var query = 'SELECT * FROM Torrents ORDER BY id DESC LIMIT '+limit+' OFFSET '+offset
-		connection.query(query, function(err, rows, fields) {
-		  if (err) throw err;
-		  res.json(rows)
-		});
+		findAllTorrents(req.query, function(data){
+			if(!!data)
+				res.json(data)
+			else
+				res.status(500).send()
+		})
+		
 	})
 	.post(function (req, res){
 		insertTorrent(req.body, function(ok){
-			if(ok){
+			if(ok)
 				res.status(201).send()
-			}
-			else{
+			else
 				res.status(500).send()
-			}
 		})
 	})
 

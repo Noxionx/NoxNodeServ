@@ -12,18 +12,27 @@ var fetchCID = function(CID, callback){
 				while(offset<nbTorrents){
 					t411.getTorrents({cid:CID, limit: limit, offset:offset}, function(data){
 						var i = 0;
-						data.forEach(function(elt){
-							torrents.insertTorrent(elt, function(){
-								i++;
-								if(i==data.length){
-									progress+=((nbTorrents<limit)?100:((limit/nbTorrents)*100))
-									console.log("Fetched CID "+CID+" : "+progress+" %")
-									if(progress>=100){
-										!!callback && callback()
+						if(data.length==0){
+							progress+=((nbTorrents<limit)?100:((limit/nbTorrents)*100))
+							console.log("Fetched CID "+CID+" : "+progress+" %")
+							if(progress>=100){
+								!!callback && callback()
+							}
+						}
+						else{
+							data.forEach(function(elt){
+								torrents.insertTorrent(elt, function(){
+									i++;
+									if(i==data.length){
+										progress+=((nbTorrents<limit)?100:((limit/nbTorrents)*100))
+										console.log("Fetched CID "+CID+" : "+progress+" %")
+										if(progress>=100){
+											!!callback && callback()
+										}
 									}
-								}
+								})
 							})
-						})
+						}
 					})
 					offset+=limit
 				}
@@ -67,44 +76,53 @@ exports.fetchAllCID = fetchAllCID
 
 var refreshTorrents = function(callback){
 	torrents.getLastInsertedId(function(lastId){
-		var done = false
-		var limit = 100
-		var offset = 0
-		var timer = setInterval(function(){
-			var busy = false
-			if(done){
-				clearTimeout(timer)
-				!!callback && callback()
-			}
-			if(!busy){
-				busy = true
-				t411.getTorrents({limit: limit, offset:offset}, function(data){
-					if(data.length>0){
-						var i=0
-						data.forEach(function(elt){
-							if(!!elt.id && lastId<parseInt(elt.id)){
-								torrents.insertTorrent(elt, function(){
-									console.log("inserted new torrent : "+elt.id)
-									i++;
-									if(i==data.length){
-										busy = false	
-									}
-								})
-							}
-							else{
-								done = true
-							}
-						})
-					}
-					else{
-						done=true
-					}
-				})
-			}
+		if(lastId){
+			var done = false
+			var limit = 100
+			var offset = 0
+			var timer = setInterval(function(){
+				var busy = false
+				if(done){
+					clearTimeout(timer)
+					!!callback && callback(data&&!busy)
+				}
+				if(!busy){
+					busy = true
+					t411.getTorrents({limit: limit, offset:offset}, function(data){
+						if(!!data && data.length>0){
+							var i=0
+							data.forEach(function(elt){
+								if(!!elt.id && lastId<parseInt(elt.id)){
+									torrents.insertTorrent(elt, function(){
+										console.log("inserted new torrent : "+elt.id)
+										i++;
+										if(i==data.length){
+											busy = false	
+										}
+									})
+								}
+								else{
+									done = true
+								}
+							})
+						}
+						else{
+							done=true
+						}
+					})
+				}
 
-		}, 1000)
+			}, 1000)
+		}
+		else{
+			fetchAllCID(function(){
+				!!callback && callback(true)
+			})
+		}
 	})
 }
+
+exports.refreshTorrents = refreshTorrents
 
 var ready = false
 if(!t411.isConnected()){
