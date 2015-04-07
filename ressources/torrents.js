@@ -24,10 +24,19 @@ var torrent_model = {
     "categoryname": null,
     "username": null
 }
+
 var findAllTorrents = function(options, callback){
+	/*  options = {
+			query : "string", 
+			cid : number | [number],
+			limit : number, (default : 50)
+			offset : number, (default : 0)
+			sort : "string", (default : id)
+			order : "asc" | "desc" (default : desc)
+		}
+	*/
 	var cols_ordered = ["id","rewritename","seeders","leechers","added","size","times_completed"]
 	if(options.cid){
-		console.log(options.cid)
 		if(typeof options.cid=="string"){
 			if(options.cid.match(/\[(\s*\d*\s*)(,\s*\d*\s*)*\]/)){
 				options.cid = JSON.parse(options.cid)
@@ -59,17 +68,26 @@ var findAllTorrents = function(options, callback){
 		}
 	}
 	var query = 'SELECT * FROM Torrents'+
-				(options.query?" WHERE rewritename LIKE '%"+options.query+"%'":"")+
-				(options.cid?((options.query?" AND":" WHERE")+" category IN ("+options.cid.join()+")"):"")+
-				' ORDER BY '+col_ordered+' '+direction+' LIMIT '+(options.limit || 50)+' OFFSET '+(options.offset || 0)
-	console.log(query)
+				(options.query?" WHERE rewritename LIKE "+connection.escape('%'+options.query+'%'):"")+
+				(options.cid?((options.query?" AND":" WHERE")+" category IN ("+connection.escape(options.cid)+")"):"")+
+				' ORDER BY '+col_ordered+' '+direction+' LIMIT '+connection.escape(options.limit?parseInt(options.limit) : 50)+' OFFSET '+connection.escape(options.offset|| 0)
 	connection.query(query, function(err, rows, fields) {
 	  if (err) throw err;
 	  !!callback && callback(rows)
 	});
 }
-var findTorrentById = function(id){
-
+var findTorrentById = function(id, callback){
+	var query = 'SELECT * FROM Torrents WHERE id=?'
+	var num_id = parseInt(id)
+	if(id!=NaN){
+		connection.query(query, [num_id], function(err, rows, fields){
+			if(err) throw err;
+			!!callback && callback(rows)
+		})
+	}
+	else{
+		!!callback && callback(null)
+	}
 }
 
 var createTorrent = function(torrent){
@@ -205,7 +223,14 @@ router.route('/torrents')
 
 router.route('/torrents/:id')
 	.get(function (req, res){
-		res.status(501).send("Not implemented")
+		findTorrentById(req.params.id, function(data){
+			if(!data){
+				res.status(404).send()
+			}
+			else{
+				res.json(data)
+			}
+		})
 	})
 	.put(function (req, res){
 		res.status(501).send("Not implemented")

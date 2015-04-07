@@ -10,8 +10,6 @@ var t411 = require("./t411-handler.js")
 var torrents = require("./ressources/torrents.js")
 
 
-
-
 //Express initialization
 app.set('trust proxy', 1) // trust first proxy
 app.use(express.static('public'));
@@ -26,8 +24,6 @@ app.use(session({
 }))
 app.use(passport.initialize());
 app.use(passport.session());
-
-app.use('/api', torrents.router)
 
 
 //Middleware - Loggin each request with timestamp + path
@@ -76,9 +72,9 @@ app.post('/login', function (req, res) {
 	}
 })
 
+app.use('/api', torrents.router)
 
-
-
+//Start server
 var server = app.listen(3000, function () {
 
   var host = server.address().address
