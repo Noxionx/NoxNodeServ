@@ -1,13 +1,15 @@
 var express = require("express")
-var passport = require("passport")
-var LocalStrategy = require('passport-local').Strategy;
 var bodyParser = require("body-parser")
 var cookieParser = require("cookie-parser")
-var session = require('express-session')
+
 var app = express()
+
+
 var t411 = require("./t411-handler.js")
 
-var torrents = require("./ressources/torrents.js")
+var Users = require("./ressources/users.js")
+var Torrents = require("./ressources/torrents.js")
+
 
 
 //Express initialization
@@ -16,15 +18,8 @@ app.use(express.static('public'));
 app.use(cookieParser());
 app.use(bodyParser.urlencoded({ extended: false }))// parse application/x-www-form-urlencoded
 app.use(bodyParser.json())// parse application/json
-app.use(session({
-  secret: 'keyboard cat',
-  resave: false,
-  saveUninitialized: true,
-  cookie: { secure: true }
-}))
-app.use(passport.initialize());
-app.use(passport.session());
-
+exports.app = app
+var authentication = require('./authentication.js')
 
 //Middleware - Loggin each request with timestamp + path
 app.use(function (req, res, next) {
@@ -36,43 +31,34 @@ app.use(function (req, res, next) {
 });
 
 
-passport.use(new LocalStrategy(
-  function(username, password, done) {
-    User.findOne({ username: username }, function (err, user) {
-      if (err) { return done(err); }
-      if (!user) {
-        return done(null, false, { message: 'Incorrect username.' });
-      }
-      if (!user.validPassword(password)) {
-        return done(null, false, { message: 'Incorrect password.' });
-      }
-      return done(null, user);
-    });
-  }
-));
-passport.serializeUser(function(user, done) {
-  done(null, user.id);
-});
-
-passport.deserializeUser(function(id, done) {
-  User.findById(id, function(err, user) {
-    done(err, user);
-  });
-});
-
-//Route for login in - CREDENTIALS : {"username":username, "password":password}
-app.post('/login', function (req, res) {
-	if(!req.body.username||!req.body.password){
-		res.status(400).send({msg:"Missing parameters"})
+app.get("/", function (req, res){
+	var options = {
+	    root: __dirname + '/default_app/',
+	    dotfiles: 'deny',
+	    headers: {
+	        'x-timestamp': Date.now(),
+	        'x-sent': true
+	    }
 	}
-	else{
-		t411.connectUser(req.body.username, req.body.password, function(){
-			res.send({msg:"Authenticated !"})
-		})
+	if(req.user){
+		options.root = __dirname + '/app/'
 	}
+	res.sendFile("index.html", options, function (err) {
+	    if (err) {
+		    console.log(err);
+		    res.status(err.status).end();
+	    }
+	})
 })
 
-app.use('/api', torrents.router)
+app.use('/api', function (req, res, next){
+	if(req.user){
+		next()
+	}
+	else{
+		res.status(401).send({msg : "You have to sign in."})
+	}
+},Torrents.router, Users.router)
 
 //Start server
 var server = app.listen(3000, function () {
