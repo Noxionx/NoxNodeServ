@@ -30,20 +30,29 @@ app.use(function (req, res, next) {
  	next();
 });
 
-
+var options = {
+    root: __dirname + '/app/',
+    dotfiles: 'deny',
+    headers: {
+        'x-timestamp': Date.now(),
+        'x-sent': true
+    }
+}
 app.get("/", function (req, res){
-	var options = {
-	    root: __dirname + '/default_app/',
-	    dotfiles: 'deny',
-	    headers: {
-	        'x-timestamp': Date.now(),
-	        'x-sent': true
-	    }
+	if(req.user){	
+		res.sendFile("index.html", options, function (err) {
+		    if (err) {
+			    console.log(err);
+			    res.status(err.status).end();
+		    }
+		})
 	}
-	if(req.user){
-		options.root = __dirname + '/app/'
+	else{
+		res.redirect('/login')
 	}
-	res.sendFile("index.html", options, function (err) {
+})
+app.get('/login', function(req, res){	
+	res.sendFile("login.html", options, function (err) {
 	    if (err) {
 		    console.log(err);
 		    res.status(err.status).end();
